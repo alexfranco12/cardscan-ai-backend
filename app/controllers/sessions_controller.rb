@@ -60,11 +60,18 @@ class SessionsController < ApplicationController
       http.request(req) 
     }
 
+    if res.msg == "OK"
+      render json: {
+        res: res,
+        token: JSON.parse(res.body)
+      }
+    else
+      render json: {
+        res: res,
+        error: res.msg
+      }
+    end
     
-    render json: {
-      res: res,
-      token: JSON.parse(res.body)
-    }
   end
 
 end

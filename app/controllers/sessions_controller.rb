@@ -1,3 +1,6 @@
+require 'uri'
+require 'net/http'
+
 class SessionsController < ApplicationController
   # include CurrentUserConcern
 
@@ -40,6 +43,27 @@ class SessionsController < ApplicationController
     render json: { 
       status: 200,
       logged_out: true,
+    }
+  end
+
+  def cardscan_session
+    # Generates a cardscan.ai token for the logged-in user and returns it.
+    uri = URI("https://sandbox.cardscan.ai/v1/access-token")
+    params = {
+      :user_id => current_user.id
+    }
+
+    req = Net::HTTP::Get.new(uri)
+    req.form_data = params
+    req['Authorization'] = "Bearer #{ENV["CARDSCAN_AI_KEY"]}"
+    res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => uri.scheme == 'https' ) { |http|
+      http.request(req) 
+    }
+
+    
+    render json: {
+      res: res,
+      token: JSON.parse(res.body)
     }
   end
 

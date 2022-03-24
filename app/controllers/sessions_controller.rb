@@ -1,4 +1,5 @@
 require 'uri'
+require 'json'
 require 'net/http'
 
 class SessionsController < ApplicationController
@@ -53,25 +54,98 @@ class SessionsController < ApplicationController
       :user_id => current_user.id
     }
 
-    req = Net::HTTP::Get.new(uri)
-    req.form_data = params
-    req['Authorization'] = "Bearer #{ENV["CARDSCAN_AI_KEY"]}"
-    res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => uri.scheme == 'https' ) { |http|
-      http.request(req) 
-    }
+    https = Net::HTTP.new(uri.host, uri.port)
+    https.use_ssl = true
 
-    if res.msg == "OK"
+    request = Net::HTTP::Get.new(uri)
+    request["Content-Type"] = "application/json"
+    request["Authorization"] = "Bearer #{ENV["CARDSCAN_AI_KEY"]}"
+    request.form_data = params
+
+    response = https.request(request)
+
+    if response.msg == "OK"
       render json: {
-        res: res,
-        token: JSON.parse(res.body)
+        response: response,
+        status: response.code,
+        message: response.message,
+        session: JSON.parse(response.body)
       }
     else
       render json: {
-        res: res,
-        error: res.msg
+        response: response,
+        status: response.code,
+        error: response.message,
       }
     end
     
+  end
+
+  def scan_document
+    uri = URI("https://sandbox.cardscan.ai/v1/generate-upload-url")
+    params = {
+      # :image => post_params,
+      :live => false
+    }
+
+    https = Net::HTTP.new(uri.host, uri.port)
+    https.use_ssl = true
+
+    request = Net::HTTP::Get.new(uri)
+    request["Content-Type"] = "application/json"
+    request["Authorization"] = "Bearer #{ENV["CARDSCAN_AI_KEY"]}"
+    request.form_data = params
+
+    response = https.request(request)
+
+    if response.msg == "OK"
+      render json: {
+        response: response,
+        status: response.code,
+        message: response.message,
+        details: JSON.parse(response.body)
+      }
+    else
+      render json: {
+        response: response,
+        status: response.code,
+        error: response.message,
+      }
+    end
+  end
+
+  def card
+    url = URI("https://sandbox.cardscan.ai/v1/cards/#{params[:card_id]}")
+
+    https = Net::HTTP.new(url.host, url.port)
+    https.use_ssl = true
+
+    request = Net::HTTP::Get.new(url)
+    request["Content-Type"] = "application/json"
+    request["Authorization"] = "Bearer #{ENV["CARDSCAN_AI_KEY"]}"
+
+    response = https.request(request)
+
+    if response.msg == "OK"
+      render json: {
+        response: response,
+        status: response.code,
+        message: response.message,
+        card: JSON.parse(response.body)
+      }
+    else
+      render json: {
+        response: response,
+        status: response.code,
+        error: response.message,
+      }
+    end
+
+  end
+
+  private
+  def post_params
+    params.permit(:image)
   end
 
 end
